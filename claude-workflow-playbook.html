@@ -1,0 +1,1610 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Claude Code Workflow Playbook</title>
+<style>
+:root {
+  --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: 'SF Mono', 'Fira Code', 'JetBrains Mono', Consolas, monospace;
+  --sidebar-w: 280px;
+  --transition: 0.2s ease;
+}
+
+[data-theme="light"] {
+  --bg: #ffffff;
+  --bg-secondary: #f6f8fa;
+  --bg-tertiary: #e8ecf0;
+  --bg-sidebar: #f0f2f5;
+  --bg-code: #f0f2f5;
+  --bg-card: #ffffff;
+  --border: #d1d9e0;
+  --border-light: #e8ecf0;
+  --text: #1a1a2e;
+  --text-secondary: #57606a;
+  --text-muted: #8b949e;
+  --accent: #5b6ef7;
+  --accent-hover: #4858e8;
+  --accent-bg: rgba(91, 110, 247, 0.08);
+  --accent-border: rgba(91, 110, 247, 0.3);
+  --success: #2da44e;
+  --warning: #d4a72c;
+  --danger: #cf222e;
+  --shadow: 0 1px 3px rgba(0,0,0,0.08);
+  --shadow-lg: 0 4px 12px rgba(0,0,0,0.1);
+  --tag-bg: #e8ecf0;
+  --tag-text: #57606a;
+  --search-bg: #ffffff;
+  --search-border: #d1d9e0;
+}
+
+[data-theme="dark"] {
+  --bg: #0d1117;
+  --bg-secondary: #161b22;
+  --bg-tertiary: #1c2129;
+  --bg-sidebar: #0d1117;
+  --bg-code: #161b22;
+  --bg-card: #161b22;
+  --border: #30363d;
+  --border-light: #21262d;
+  --text: #e6edf3;
+  --text-secondary: #b1bac4;
+  --text-muted: #6e7681;
+  --accent: #7b8ef8;
+  --accent-hover: #9aa5fa;
+  --accent-bg: rgba(123, 142, 248, 0.1);
+  --accent-border: rgba(123, 142, 248, 0.3);
+  --success: #3fb950;
+  --warning: #d29922;
+  --danger: #f85149;
+  --shadow: 0 1px 3px rgba(0,0,0,0.3);
+  --shadow-lg: 0 4px 12px rgba(0,0,0,0.4);
+  --tag-bg: #1c2129;
+  --tag-text: #b1bac4;
+  --search-bg: #161b22;
+  --search-border: #30363d;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; scroll-padding-top: 80px; }
+
+body {
+  font-family: var(--font-sans);
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.65;
+  transition: background var(--transition), color var(--transition);
+}
+
+a { color: var(--accent); text-decoration: none; }
+a:hover { color: var(--accent-hover); text-decoration: underline; }
+
+.layout { display: flex; min-height: 100vh; }
+
+/* Sidebar */
+.sidebar {
+  position: fixed; top: 0; left: 0;
+  width: var(--sidebar-w); height: 100vh;
+  background: var(--bg-sidebar);
+  border-right: 1px solid var(--border);
+  overflow-y: auto; z-index: 100;
+  display: flex; flex-direction: column;
+  transition: transform 0.3s ease, background var(--transition);
+}
+
+.sidebar-header {
+  padding: 20px 16px 12px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.sidebar-header h1 { font-size: 15px; font-weight: 700; letter-spacing: -0.02em; color: var(--text); margin-bottom: 2px; }
+.sidebar-header p { font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; }
+
+.search-box { padding: 12px 16px; flex-shrink: 0; }
+.search-box input {
+  width: 100%; padding: 8px 12px;
+  border: 1px solid var(--search-border); border-radius: 6px;
+  background: var(--search-bg); color: var(--text);
+  font-size: 13px; font-family: var(--font-sans); outline: none;
+  transition: border-color var(--transition);
+}
+.search-box input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-bg); }
+.search-box input::placeholder { color: var(--text-muted); }
+
+.sidebar-nav { flex: 1; overflow-y: auto; padding: 8px 0 20px; }
+.nav-group { margin-bottom: 4px; }
+.nav-group-title { padding: 8px 16px 4px; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-muted); }
+
+.nav-link {
+  display: block; padding: 5px 16px 5px 24px; font-size: 13px;
+  color: var(--text-secondary); text-decoration: none;
+  border-left: 2px solid transparent; transition: all var(--transition); cursor: pointer;
+}
+.nav-link:hover { color: var(--text); background: var(--accent-bg); text-decoration: none; }
+.nav-link.active { color: var(--accent); border-left-color: var(--accent); background: var(--accent-bg); font-weight: 500; }
+.nav-link.hidden { display: none; }
+
+.sidebar-footer { padding: 12px 16px; border-top: 1px solid var(--border); flex-shrink: 0; }
+.theme-toggle {
+  display: flex; align-items: center; gap: 8px; padding: 6px 10px;
+  background: var(--bg-tertiary); border: 1px solid var(--border); border-radius: 6px;
+  color: var(--text-secondary); font-size: 12px; cursor: pointer; width: 100%;
+  transition: all var(--transition);
+}
+.theme-toggle:hover { border-color: var(--accent); color: var(--text); }
+
+/* Main */
+.main { margin-left: var(--sidebar-w); flex: 1; max-width: 860px; padding: 40px 48px 80px; }
+
+/* Sections */
+.section { margin-bottom: 48px; }
+.section-title { font-size: 28px; font-weight: 700; letter-spacing: -0.03em; margin-bottom: 8px; padding-bottom: 12px; border-bottom: 2px solid var(--border); color: var(--text); }
+.section-subtitle { font-size: 20px; font-weight: 600; letter-spacing: -0.02em; margin: 32px 0 12px; color: var(--text); }
+.section-intro { color: var(--text-secondary); font-size: 15px; margin-bottom: 24px; max-width: 640px; }
+
+/* Scenario Cards */
+.scenario { background: var(--bg-card); border: 1px solid var(--border); border-radius: 10px; margin-bottom: 16px; overflow: hidden; transition: border-color var(--transition), box-shadow var(--transition); }
+.scenario:hover { border-color: var(--accent-border); box-shadow: var(--shadow); }
+.scenario-header { display: flex; align-items: center; justify-content: space-between; padding: 16px 20px; cursor: pointer; user-select: none; }
+.scenario-header:hover { background: var(--accent-bg); }
+.scenario-header h3 { font-size: 15px; font-weight: 600; color: var(--text); display: flex; align-items: center; gap: 10px; }
+.scenario-number { display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; border-radius: 6px; background: var(--accent-bg); color: var(--accent); font-size: 11px; font-weight: 700; flex-shrink: 0; }
+.scenario-chevron { color: var(--text-muted); font-size: 18px; transition: transform 0.2s ease; flex-shrink: 0; }
+.scenario.open .scenario-chevron { transform: rotate(90deg); }
+.scenario-body { display: none; padding: 0 20px 20px; border-top: 1px solid var(--border-light); }
+.scenario.open .scenario-body { display: block; }
+
+.scenario-meta { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 16px; padding-top: 16px; }
+.tag { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 500; background: var(--tag-bg); color: var(--tag-text); }
+.tag.skill { background: rgba(91, 110, 247, 0.12); color: var(--accent); }
+.tag.plugin { background: rgba(45, 164, 78, 0.12); color: var(--success); }
+.tag.agent { background: rgba(210, 153, 34, 0.12); color: var(--warning); }
+.tag.mcp { background: rgba(248, 81, 73, 0.12); color: var(--danger); }
+
+.scenario-body h4 { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-muted); margin: 16px 0 6px; }
+.scenario-body h4:first-child { margin-top: 0; }
+.scenario-body p, .scenario-body li { font-size: 14px; color: var(--text-secondary); line-height: 1.65; }
+.scenario-body ul, .scenario-body ol { padding-left: 20px; margin: 4px 0; }
+.scenario-body li { margin-bottom: 4px; }
+
+/* Reference Cards */
+.ref-grid { display: grid; grid-template-columns: 1fr; gap: 12px; margin-top: 16px; }
+.ref-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px; padding: 16px 20px; transition: border-color var(--transition); }
+.ref-card:hover { border-color: var(--accent-border); }
+.ref-card-header { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+.ref-card h4 { font-size: 14px; font-weight: 600; color: var(--text); }
+.ref-card p { font-size: 13px; color: var(--text-secondary); line-height: 1.55; }
+.ref-card .trigger { margin-top: 8px; font-size: 12px; color: var(--text-muted); }
+.ref-card .trigger code { background: var(--bg-code); padding: 1px 5px; border-radius: 3px; font-family: var(--font-mono); font-size: 11px; color: var(--accent); }
+
+/* Code */
+pre { background: var(--bg-code); border: 1px solid var(--border); border-radius: 8px; padding: 14px 18px; overflow-x: auto; margin: 8px 0 12px; font-size: 13px; line-height: 1.55; }
+code { font-family: var(--font-mono); font-size: 0.9em; }
+p code, li code { background: var(--bg-code); padding: 2px 6px; border-radius: 4px; font-size: 12px; color: var(--accent); border: 1px solid var(--border-light); }
+pre code { background: none; padding: 0; border: none; color: var(--text); }
+
+.tok-comment { color: var(--text-muted); font-style: italic; }
+.tok-cmd { color: #61afef; }
+.tok-flag { color: #e5c07b; }
+.tok-str { color: #98c379; }
+.tok-path { color: #d19a66; }
+.tok-kw { color: #c678dd; }
+[data-theme="light"] .tok-cmd { color: #4078f2; }
+[data-theme="light"] .tok-flag { color: #c18401; }
+[data-theme="light"] .tok-str { color: #50a14f; }
+[data-theme="light"] .tok-path { color: #986801; }
+[data-theme="light"] .tok-kw { color: #a626a4; }
+
+/* Flow Diagram */
+.flow-diagram { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: center; padding: 12px 0; }
+.flow-step { background: var(--accent-bg); border: 1px solid var(--accent-border); border-radius: 8px; padding: 8px 14px; font-size: 12px; font-weight: 600; color: var(--accent); white-space: nowrap; }
+.flow-arrow { color: var(--text-muted); font-size: 16px; }
+
+/* Concept Grid */
+.concept-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; margin: 16px 0 24px; }
+.concept-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px; padding: 16px; }
+.concept-card h4 { font-size: 14px; font-weight: 600; color: var(--text); margin-bottom: 4px; }
+.concept-card p { font-size: 13px; color: var(--text-secondary); line-height: 1.5; }
+
+/* Callouts */
+.callout { border-left: 3px solid var(--accent); background: var(--accent-bg); border-radius: 0 6px 6px 0; padding: 12px 16px; margin: 12px 0; font-size: 13px; color: var(--text-secondary); }
+.callout.tip { border-left-color: var(--success); background: rgba(45, 164, 78, 0.06); }
+.callout.warn { border-left-color: var(--warning); background: rgba(210, 153, 34, 0.06); }
+.callout strong { color: var(--text); }
+
+/* Mobile */
+.mobile-toggle { display: none; position: fixed; top: 12px; left: 12px; z-index: 200; background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px; padding: 8px 12px; color: var(--text); cursor: pointer; font-size: 18px; }
+@media (max-width: 768px) {
+  .mobile-toggle { display: block; }
+  .sidebar { transform: translateX(-100%); }
+  .sidebar.open { transform: translateX(0); box-shadow: var(--shadow-lg); }
+  .main { margin-left: 0; padding: 60px 20px 80px; }
+}
+
+/* Print */
+@media print {
+  .sidebar, .mobile-toggle, .theme-toggle, .search-box { display: none !important; }
+  .main { margin-left: 0; max-width: 100%; }
+  .scenario-body { display: block !important; }
+  .scenario { break-inside: avoid; }
+}
+
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
+
+.section.search-hidden { display: none; }
+</style>
+</head>
+<body>
+
+<button class="mobile-toggle" onclick="document.querySelector('.sidebar').classList.toggle('open')">&#9776;</button>
+
+<div class="layout">
+
+<nav class="sidebar">
+  <div class="sidebar-header">
+    <h1>Claude Code Playbook</h1>
+    <p>Workflow &amp; Reference Guide</p>
+  </div>
+  <div class="search-box">
+    <input type="text" id="search" placeholder="Search workflows, skills... ( / )" autocomplete="off">
+  </div>
+  <div class="sidebar-nav" id="sidebar-nav">
+    <div class="nav-group">
+      <div class="nav-group-title">Setup</div>
+      <a class="nav-link" href="#setup" data-section="setup">Installation &amp; Setup</a>
+    </div>
+    <div class="nav-group">
+      <div class="nav-group-title">Core Concepts</div>
+      <a class="nav-link" href="#concepts" data-section="concepts">How It All Fits Together</a>
+    </div>
+    <div class="nav-group">
+      <div class="nav-group-title">Getting Started</div>
+      <a class="nav-link" href="#w-basics" data-section="w-basics">Understanding the Basics</a>
+      <a class="nav-link" href="#w-agents" data-section="w-agents">Understanding Agents</a>
+    </div>
+    <div class="nav-group">
+      <div class="nav-group-title">Day-to-Day Development</div>
+      <a class="nav-link" href="#w-feature" data-section="w-feature">Starting a New Feature</a>
+      <a class="nav-link" href="#w-frontend" data-section="w-frontend">Writing Frontend Code</a>
+      <a class="nav-link" href="#w-pencil" data-section="w-pencil">Designing with Pencil</a>
+      <a class="nav-link" href="#w-database" data-section="w-database">Working with the Database</a>
+      <a class="nav-link" href="#w-tests" data-section="w-tests">Running Tests (TDD)</a>
+      <a class="nav-link" href="#w-debug" data-section="w-debug">Debugging an Issue</a>
+    </div>
+    <div class="nav-group">
+      <div class="nav-group-title">Code Quality &amp; Review</div>
+      <a class="nav-link" href="#w-pre-push" data-section="w-pre-push">Before Pushing Code</a>
+      <a class="nav-link" href="#w-pr-review" data-section="w-pr-review">Reviewing a PR</a>
+      <a class="nav-link" href="#w-dependabot" data-section="w-dependabot">Dependabot Alerts</a>
+      <a class="nav-link" href="#w-conflicts" data-section="w-conflicts">Merge Conflicts</a>
+    </div>
+    <div class="nav-group">
+      <div class="nav-group-title">Shipping &amp; Operations</div>
+      <a class="nav-link" href="#w-ship" data-section="w-ship">Shipping a Branch</a>
+      <a class="nav-link" href="#w-publish" data-section="w-publish">Publishing a Branch</a>
+      <a class="nav-link" href="#w-qa" data-section="w-qa">QA Testing</a>
+      <a class="nav-link" href="#w-linear" data-section="w-linear">Working with Linear</a>
+    </div>
+    <div class="nav-group">
+      <div class="nav-group-title">Advanced</div>
+      <a class="nav-link" href="#w-parallel" data-section="w-parallel">Parallel Agents</a>
+      <a class="nav-link" href="#w-browser" data-section="w-browser">Browser Automation</a>
+      <a class="nav-link" href="#w-arch" data-section="w-arch">Architecture Reviews</a>
+      <a class="nav-link" href="#w-retro" data-section="w-retro">Retrospectives</a>
+      <a class="nav-link" href="#w-custom-skills" data-section="w-custom-skills">Writing Custom Skills</a>
+      <a class="nav-link" href="#w-memory" data-section="w-memory">Managing Memory</a>
+      <a class="nav-link" href="#w-troubleshoot" data-section="w-troubleshoot">Troubleshooting</a>
+    </div>
+    <div class="nav-group">
+      <div class="nav-group-title">Reference</div>
+      <a class="nav-link" href="#ref-plugins" data-section="ref-plugins">Plugins</a>
+      <a class="nav-link" href="#ref-planning" data-section="ref-planning">Planning &amp; Design</a>
+      <a class="nav-link" href="#ref-quality" data-section="ref-quality">Code Quality</a>
+      <a class="nav-link" href="#ref-dev" data-section="ref-dev">Development</a>
+      <a class="nav-link" href="#ref-frontend" data-section="ref-frontend">Frontend</a>
+      <a class="nav-link" href="#ref-database" data-section="ref-database">Database</a>
+      <a class="nav-link" href="#ref-shipping" data-section="ref-shipping">Shipping</a>
+      <a class="nav-link" href="#ref-qa" data-section="ref-qa">QA &amp; Testing</a>
+      <a class="nav-link" href="#ref-integration" data-section="ref-integration">Integration</a>
+      <a class="nav-link" href="#ref-agents" data-section="ref-agents">Agent Types</a>
+      <a class="nav-link" href="#ref-mcp" data-section="ref-mcp">MCP Servers</a>
+      <a class="nav-link" href="#ref-core" data-section="ref-core">Core Systems</a>
+      <a class="nav-link" href="#ref-meta" data-section="ref-meta">Meta</a>
+    </div>
+  </div>
+  <div class="sidebar-footer">
+    <button class="theme-toggle" onclick="toggleTheme()">
+      <span id="theme-icon">&#9790;</span>
+      <span id="theme-label">Light mode</span>
+    </button>
+  </div>
+</nav>
+
+<main class="main">
+
+<!-- ===== SETUP ===== -->
+<div class="section" id="setup" data-searchable>
+  <h2 class="section-title">Installation &amp; Setup</h2>
+  <p class="section-intro">Everything you need to go from zero to a fully configured Claude Code environment with plugins, skills, agents, and MCP servers.</p>
+
+  <h3 class="section-subtitle">1. Install Claude Code</h3>
+  <pre><code><span class="tok-comment"># Install the CLI globally</span>
+<span class="tok-cmd">npm</span> <span class="tok-flag">install</span> -g @anthropic-ai/claude-code
+
+<span class="tok-comment"># Verify installation</span>
+<span class="tok-cmd">claude</span> <span class="tok-flag">--version</span>
+
+<span class="tok-comment"># Start Claude Code in any project directory</span>
+<span class="tok-cmd">cd</span> <span class="tok-path">your-project/</span>
+<span class="tok-cmd">claude</span></code></pre>
+
+  <h3 class="section-subtitle">2. Configure Settings</h3>
+  <p>Claude Code settings live at <code>~/.claude/settings.json</code>. Key things to configure:</p>
+  <pre><code>{
+  <span class="tok-str">"permissions"</span>: {
+    <span class="tok-str">"allow"</span>: [
+      <span class="tok-str">"Bash(ls:*)"</span>,
+      <span class="tok-str">"Bash(git:*)"</span>,
+      <span class="tok-str">"Bash(npm run:*)"</span>,
+      <span class="tok-str">"Bash(npx:*)"</span>
+    ]
+  },
+  <span class="tok-str">"plugins"</span>: {
+    <span class="tok-str">"enabled"</span>: [
+      <span class="tok-str">"superpowers@claude-plugins-official"</span>,
+      <span class="tok-str">"frontend-design@claude-plugins-official"</span>
+    ]
+  }
+}</code></pre>
+  <div class="callout tip">
+    <strong>Tip:</strong> Symlink your settings from a dotfiles repo to keep them consistent across machines: <code>ln -s ~/dotfiles/claude/settings.json ~/.claude/settings.json</code>
+  </div>
+
+  <h3 class="section-subtitle">3. Install Plugins</h3>
+  <p>Plugins bundle multiple skills together. The two essential plugins:</p>
+  <ul>
+    <li><strong>Superpowers</strong> &mdash; 14 skills for planning, development, debugging, code review, and shipping workflows</li>
+    <li><strong>Frontend Design</strong> &mdash; production-grade UI generation with distinctive aesthetics</li>
+  </ul>
+  <p>Plugins are configured in <code>settings.json</code> under the <code>plugins.enabled</code> array. Claude Code installs and caches them automatically at <code>~/.claude/plugins/cache/</code>.</p>
+
+  <h3 class="section-subtitle">4. Install Custom Skills</h3>
+  <p>Skills are individual workflow definitions stored at <code>~/.claude/skills/</code>. You can create them directly or symlink from a shared repo:</p>
+  <pre><code><span class="tok-comment"># Symlink skills from a shared dotfiles repo</span>
+<span class="tok-cmd">ln</span> <span class="tok-flag">-s</span> <span class="tok-path">~/dotfiles/claude/skills/*</span> <span class="tok-path">~/.claude/skills/</span>
+
+<span class="tok-comment"># Or clone a skills repo</span>
+<span class="tok-cmd">git</span> clone git@github.com:your-org/claude-skills.git <span class="tok-path">~/.claude/skills/shared</span></code></pre>
+  <p>Each skill is a directory containing a <code>skill.md</code> (or similar) file that defines when and how the skill activates.</p>
+
+  <h3 class="section-subtitle">5. Configure MCP Servers</h3>
+  <p>MCP (Model Context Protocol) servers extend Claude with external tool integrations. Configure them in <code>settings.json</code>:</p>
+  <ul>
+    <li><strong>Pencil</strong> &mdash; Design editor for visual design files</li>
+    <li><strong>Chrome (claude-in-chrome)</strong> &mdash; Browser automation, QA testing, form filling</li>
+    <li><strong>Linear</strong> &mdash; Issue tracking, project management</li>
+    <li><strong>Excalidraw</strong> &mdash; Diagrams and visual collaboration</li>
+  </ul>
+
+  <h3 class="section-subtitle">6. Set Up CLAUDE.md Files</h3>
+  <p>CLAUDE.md files provide project-scoped instructions that Claude follows automatically. Place them at:</p>
+  <ul>
+    <li><code>~/.claude/CLAUDE.md</code> &mdash; Global instructions (all projects)</li>
+    <li><code>your-project/CLAUDE.md</code> &mdash; Project root instructions</li>
+    <li><code>your-project/apps/web/CLAUDE.md</code> &mdash; Sub-directory specific instructions</li>
+  </ul>
+  <div class="callout">
+    <strong>CLAUDE.md</strong> is how you teach Claude about your codebase &mdash; architecture, conventions, commands, patterns. Think of it as onboarding docs for your AI pair programmer.
+  </div>
+
+  <h3 class="section-subtitle">7. Configure Memory</h3>
+  <p>Claude has a persistent memory system at <code>~/.claude/projects/{project}/memory/</code>. Memory carries across conversations. Types:</p>
+  <ul>
+    <li><strong>user</strong> &mdash; Your role, preferences, expertise level</li>
+    <li><strong>feedback</strong> &mdash; Corrections and guidance you've given Claude</li>
+    <li><strong>project</strong> &mdash; Ongoing work context, decisions, deadlines</li>
+    <li><strong>reference</strong> &mdash; Pointers to external systems (Linear projects, Grafana dashboards)</li>
+  </ul>
+  <p>Memory builds up automatically as you work. You can also explicitly say "remember that..." to save something.</p>
+</div>
+
+<!-- ===== CORE CONCEPTS ===== -->
+<div class="section" id="concepts" data-searchable>
+  <h2 class="section-title">How It All Fits Together</h2>
+  <p class="section-intro">The mental model for understanding Claude Code's extensibility layers.</p>
+
+  <div class="concept-grid">
+    <div class="concept-card">
+      <h4>CLAUDE.md</h4>
+      <p>Project-scoped instructions Claude follows automatically. Defines architecture, conventions, and commands. Loaded at conversation start.</p>
+    </div>
+    <div class="concept-card">
+      <h4>Skills</h4>
+      <p>Reusable workflow definitions. Auto-trigger based on context or invoked via <code>/skill-name</code>. Define HOW to approach tasks.</p>
+    </div>
+    <div class="concept-card">
+      <h4>Plugins</h4>
+      <p>Bundles of skills distributed as packages. Installed once, available everywhere. Superpowers plugin includes 14 development workflow skills.</p>
+    </div>
+    <div class="concept-card">
+      <h4>Agents</h4>
+      <p>Subprocesses Claude spawns to EXECUTE work. Run in parallel or background. Each agent type has specialized tools and capabilities.</p>
+    </div>
+    <div class="concept-card">
+      <h4>MCP Servers</h4>
+      <p>External tool integrations via Model Context Protocol. Browser automation, design tools, project management. Extend what Claude can interact with.</p>
+    </div>
+    <div class="concept-card">
+      <h4>Memory</h4>
+      <p>Persistent file-based knowledge across conversations. Stores your preferences, project context, and corrections so Claude improves over time.</p>
+    </div>
+    <div class="concept-card">
+      <h4>Hooks</h4>
+      <p>Shell commands that execute in response to Claude Code events. Automate behaviors like "run lint before every commit" or "notify on task completion."</p>
+    </div>
+  </div>
+
+  <h3 class="section-subtitle">Typical Task Flow</h3>
+  <div class="flow-diagram">
+    <span class="flow-step">You describe a task</span>
+    <span class="flow-arrow">&rarr;</span>
+    <span class="flow-step">Skills auto-trigger</span>
+    <span class="flow-arrow">&rarr;</span>
+    <span class="flow-step">Claude plans the approach</span>
+    <span class="flow-arrow">&rarr;</span>
+    <span class="flow-step">Agents execute in parallel</span>
+    <span class="flow-arrow">&rarr;</span>
+    <span class="flow-step">MCP tools interact externally</span>
+    <span class="flow-arrow">&rarr;</span>
+    <span class="flow-step">Memory stores context</span>
+  </div>
+
+  <div class="callout">
+    <strong>Key insight:</strong> Skills define the <em>workflow</em> (brainstorm &rarr; plan &rarr; execute &rarr; review). Agents handle the <em>execution</em> (parallel research, isolated code changes). MCP servers provide the <em>tools</em> (browser, design editor, issue tracker). CLAUDE.md provides the <em>context</em> (project architecture, conventions).
+  </div>
+</div>
+
+<!-- ===== WORKFLOWS ===== -->
+<div class="section" id="w-basics" data-searchable>
+  <h2 class="section-title">Workflows</h2>
+  <p class="section-intro">Scenario-based guides for common tasks. Each is a self-contained mini-runbook.</p>
+  <h3 class="section-subtitle">Getting Started</h3>
+
+  <div class="scenario">
+    <div class="scenario-header" onclick="toggleScenario(this)">
+      <h3><span class="scenario-number">1</span> Understanding the Basics</h3>
+      <span class="scenario-chevron">&#9656;</span>
+    </div>
+    <div class="scenario-body">
+      <div class="scenario-meta"><span class="tag">essentials</span></div>
+      <h4>When to use</h4>
+      <p>You're new to Claude Code and want to understand how skills, slash commands, and auto-triggering work.</p>
+      <h4>What happens</h4>
+      <p>Claude Code reads your CLAUDE.md files at conversation start, loads available skills, and watches for context clues to auto-trigger relevant workflows.</p>
+      <h4>Key concepts</h4>
+      <ul>
+        <li><strong>Auto-triggering:</strong> Skills activate automatically based on what you're doing. Start debugging? The <code>systematic-debugging</code> skill kicks in. Writing a feature? <code>brainstorming</code> activates first.</li>
+        <li><strong>Slash commands:</strong> Type <code>/skill-name</code> to explicitly invoke a skill. Example: <code>/ship</code>, <code>/review</code>, <code>/retro</code></li>
+        <li><strong>CLAUDE.md layering:</strong> Global <code>~/.claude/CLAUDE.md</code> applies everywhere. Project-level adds project-specific context. Sub-directory files add more granular instructions.</li>
+        <li><strong>Memory persistence:</strong> Claude remembers your preferences, past corrections, and project context across conversations.</li>
+      </ul>
+      <h4>Example</h4>
+      <pre><code><span class="tok-comment"># Just start Claude in your project</span>
+<span class="tok-cmd">claude</span>
+
+<span class="tok-comment"># Or invoke a specific skill</span>
+> /brainstorm add a notification system
+> /ship
+> /review</code></pre>
+    </div>
+  </div>
+</div>
+
+<div class="section" id="w-agents" data-searchable>
+  <div class="scenario">
+    <div class="scenario-header" onclick="toggleScenario(this)">
+      <h3><span class="scenario-number">2</span> Understanding Agents</h3>
+      <span class="scenario-chevron">&#9656;</span>
+    </div>
+    <div class="scenario-body">
+      <div class="scenario-meta">
+        <span class="tag agent">agents</span>
+        <span class="tag">essentials</span>
+      </div>
+      <h4>When to use</h4>
+      <p>You want to understand how Claude spawns and uses subagents for parallel work.</p>
+      <h4>What happens</h4>
+      <p>Claude can launch specialized agents (subprocesses) that work autonomously on tasks. Each agent type has specific tools and capabilities. Agents can run in the foreground (Claude waits for results) or background (Claude continues working).</p>
+      <h4>Agent types</h4>
+      <ul>
+        <li><strong>general-purpose:</strong> Multi-step tasks, code search, complex operations. Has access to all tools.</li>
+        <li><strong>Explore:</strong> Fast codebase exploration. Searches for files, keywords, and answers codebase questions. Three levels: quick, medium, very thorough.</li>
+        <li><strong>Plan:</strong> Software architecture and implementation planning. Identifies critical files and trade-offs.</li>
+        <li><strong>code-reviewer:</strong> Reviews completed work against plans and coding standards.</li>
+        <li><strong>vercel_ai_sdk:</strong> Expert in Vercel AI SDK, builds AI-powered React components.</li>
+        <li><strong>prompter:</strong> Crafts and compares system prompts (system mode for writing, view mode for visual comparison).</li>
+        <li><strong>linear_pm:</strong> Manages Linear projects &mdash; tickets, sprints, issues, executive summaries.</li>
+      </ul>
+      <h4>Foreground vs Background</h4>
+      <ul>
+        <li><strong>Foreground (default):</strong> Claude waits for the agent to finish. Use when the result informs the next step.</li>
+        <li><strong>Background:</strong> Claude continues working while the agent runs. Use for independent tasks.</li>
+      </ul>
+      <h4>Worktree isolation</h4>
+      <p>Agents can run in an isolated git worktree &mdash; a temporary copy of the repo. Changes stay isolated until explicitly merged. Great for parallel feature work.</p>
+    </div>
+  </div>
+</div>
+
+<!-- Day-to-Day Development -->
+<div class="section" id="w-feature" data-searchable>
+  <h3 class="section-subtitle">Day-to-Day Development</h3>
+  <div class="scenario">
+    <div class="scenario-header" onclick="toggleScenario(this)">
+      <h3><span class="scenario-number">3</span> Starting a New Feature</h3>
+      <span class="scenario-chevron">&#9656;</span>
+    </div>
+    <div class="scenario-body">
+      <div class="scenario-meta">
+        <span class="tag skill">brainstorming</span>
+        <span class="tag skill">writing-plans</span>
+        <span class="tag skill">executing-plans</span>
+        <span class="tag skill">using-git-worktrees</span>
+      </div>
+      <h4>When to use</h4>
+      <p>You have a feature to build and want Claude to help from ideation through implementation.</p>
+      <h4>What happens</h4>
+      <p>The Superpowers plugin enforces a disciplined workflow:</p>
+      <div class="flow-diagram">
+        <span class="flow-step">Brainstorm</span>
+        <span class="flow-arrow">&rarr;</span>
+        <span class="flow-step">Write Plan</span>
+        <span class="flow-arrow">&rarr;</span>
+        <span class="flow-step">Execute Plan</span>
+        <span class="flow-arrow">&rarr;</span>
+        <span class="flow-step">Review</span>
+      </div>
+      <ol>
+        <li><strong>Brainstorming:</strong> Claude asks clarifying questions one at a time, proposes 2-3 approaches with trade-offs, and presents a design for your approval.</li>
+        <li><strong>Writing Plans:</strong> The approved design becomes a detailed implementation plan with ordered steps, file paths, and test coverage.</li>
+        <li><strong>Executing Plans:</strong> Claude works through the plan step by step, with review checkpoints. Can use parallel agents for independent tasks.</li>
+        <li><strong>Git Worktrees:</strong> Optionally isolate the work in a git worktree so your main branch stays clean.</li>
+      </ol>
+      <h4>How to invoke</h4>
+      <pre><code><span class="tok-comment"># Just describe your feature &mdash; brainstorming auto-triggers</span>
+> I need to add a notification system for overdue invoices
+
+<span class="tok-comment"># Or start in a worktree for isolation</span>
+> /using-git-worktrees
+> I need to add a notification system for overdue invoices</code></pre>
+      <h4>Related</h4>
+      <ul>
+        <li><a href="#w-tests">Running Tests (TDD)</a> &mdash; often used during execution</li>
+        <li><a href="#w-parallel">Parallel Agents</a> &mdash; for independent implementation tasks</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<div class="section" id="w-frontend" data-searchable>
+  <div class="scenario">
+    <div class="scenario-header" onclick="toggleScenario(this)">
+      <h3><span class="scenario-number">4</span> Writing Frontend Code</h3>
+      <span class="scenario-chevron">&#9656;</span>
+    </div>
+    <div class="scenario-body">
+      <div class="scenario-meta">
+        <span class="tag skill">frontend-design</span>
+        <span class="tag plugin">Frontend Design plugin</span>
+      </div>
+      <h4>When to use</h4>
+      <p>Building web components, pages, or applications with high design quality.</p>
+      <h4>What happens</h4>
+      <p>The Frontend Design skill generates production-grade, distinctive UI code. It avoids generic AI aesthetics and produces creative, polished interfaces.</p>
+      <h4>How to invoke</h4>
+      <pre><code><span class="tok-comment"># Auto-triggers when you describe UI work</span>
+> Build a dashboard page for viewing monthly reports
+
+<span class="tok-comment"># Or invoke explicitly</span>
+> /frontend-design create a settings panel with theme customization</code></pre>
+      <h4>Key behaviors</h4>
+      <ul>
+        <li>Generates complete, ready-to-use components</li>
+        <li>Respects your project's design system (reads CLAUDE.md for conventions)</li>
+        <li>Uses your existing UI library patterns (Tailwind, Shadcn, etc.)</li>
+        <li>Produces distinctive designs &mdash; not cookie-cutter Bootstrap/Material</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<div class="section" id="w-pencil" data-searchable>
+  <div class="scenario">
+    <div class="scenario-header" onclick="toggleScenario(this)">
+      <h3><span class="scenario-number">5</span> Designing with Pencil</h3>
+      <span class="scenario-chevron">&#9656;</span>
+    </div>
+    <div class="scenario-body">
+      <div class="scenario-meta">
+        <span class="tag mcp">Pencil MCP</span>
+      </div>
+      <h4>When to use</h4>
+      <p>You want to create, edit, or review visual designs using <code>.pen</code> files &mdash; screens, components, dashboards, landing pages, mobile apps, or slide decks.</p>
+      <h4>What happens</h4>
+      <p>Pencil is an MCP-powered design editor that Claude interacts with directly. You describe what you want, and Claude builds it visually in a <code>.pen</code> file &mdash; inserting nodes, styling them, generating images, and validating with screenshots.</p>
+      <h4>Typical workflow</h4>
+      <ol>
+        <li><strong>Open or create a file:</strong> Claude opens an existing <code>.pen</code> file or creates a new one</li>
+        <li><strong>Get guidelines:</strong> Claude fetches design guidelines for the task type (web-app, mobile-app, landing-page, slides, etc.)</li>
+        <li><strong>Get a style guide:</strong> Claude pulls a style guide for visual consistency and inspiration</li>
+        <li><strong>Design iteratively:</strong> Claude uses <code>batch_design</code> to insert, update, copy, replace, and arrange nodes &mdash; up to 25 operations per call</li>
+        <li><strong>Validate visually:</strong> Claude takes screenshots (<code>get_screenshot</code>) to check layout and appearance</li>
+        <li><strong>Refine:</strong> You review and request changes; Claude adjusts using <code>snapshot_layout</code> to understand positioning</li>
+      </ol>
+      <h4>Key operations</h4>
+      <ul>
+        <li><code>batch_get</code> &mdash; Search and read nodes by patterns or IDs</li>
+        <li><code>batch_design</code> &mdash; Insert (I), Copy (C), Replace (R), Update (U), Delete (D), Move (M), Generate image (G)</li>
+        <li><code>get_screenshot</code> &mdash; Visual validation of any node</li>
+        <li><code>snapshot_layout</code> &mdash; Inspect computed layout rectangles for precise positioning</li>
+        <li><code>get_variables</code> / <code>set_variables</code> &mdash; Manage design tokens and themes</li>
+        <li><code>export_nodes</code> &mdash; Export to PNG, JPEG, WEBP, or PDF</li>
+        <li><code>find_empty_space_on_canvas</code> &mdash; Find room for new elements</li>
+      </ul>
+      <h4>How to invoke</h4>
+      <pre><code><span class="tok-comment"># Claude uses Pencil tools when working with .pen files</span>
+> Open the dashboard design and add a revenue chart
+> Create a new mobile app design for the onboarding flow
+> Update the color scheme to use our brand colors
+> Export the login screen as a PNG
+
+<span class="tok-comment"># Design system work</span>
+> Set up variables for our color palette and typography
+> Apply the dark theme across all screens</code></pre>
+      <div class="callout">
+        <strong>Important:</strong> <code>.pen</code> file contents are encrypted and can only be accessed via Pencil MCP tools. Never use <code>Read</code> or <code>Grep</code> to read <code>.pen</code> files directly.
+      </div>
+      <h4>Related</h4>
+      <ul>
+        <li><a href="#w-frontend">Writing Frontend Code</a> &mdash; implement designs as code after visual approval</li>
+        <li><a href="#ref-mcp">MCP Servers: Pencil</a> &mdash; full tool reference</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<div class="section" id="w-database" data-searchable>
+  <div class="scenario">
+    <div class="scenario-header" onclick="toggleScenario(this)">
+      <h3><span class="scenario-number">6</span> Working with the Database</h3>
+      <span class="scenario-chevron">&#9656;</span>
+    </div>
+    <div class="scenario-body">
+      <div class="scenario-meta">
+        <span class="tag skill">prisma-migration</span>
+        <span class="tag skill">prisma-v7-migration</span>
+      </div>
+      <h4>When to use</h4>
+      <p>Creating, modifying, or reviewing Prisma schema changes and database migrations.</p>
+      <h4>What happens</h4>
+      <p>The prisma-migration skill activates when you touch <code>schema.prisma</code>, add models/columns/enums, or run migration commands.</p>
+      <h4>How to invoke</h4>
+      <pre><code><span class="tok-comment"># Auto-triggers on schema changes</span>
+> Add a notifications table with user_id, message, read_at, created_at
+
+<span class="tok-comment"># Or when running migrations</span>
+> Run the database migration for my schema changes</code></pre>
+      <h4>Key behaviors</h4>
+      <ul>
+        <li>Reviews schema changes for safety (data loss, breaking changes)</li>
+        <li>Generates migration files with proper naming</li>
+        <li>Checks for index coverage on foreign keys</li>
+        <li>Validates enum changes and column type modifications</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<div class="section" id="w-tests" data-searchable>
+  <div class="scenario">
+    <div class="scenario-header" onclick="toggleScenario(this)">
+      <h3><span class="scenario-number">7</span> Running Tests (TDD)</h3>
+      <span class="scenario-chevron">&#9656;</span>
+    </div>
+    <div class="scenario-body">
+      <div class="scenario-meta">
+        <span class="tag skill">test-driven-development</span>
+        <span class="tag skill">testing-guidelines</span>
+      </div>
+      <h4>When to use</h4>
+      <p>Implementing any feature or bugfix. The TDD skill activates before you write implementation code.</p>
+      <h4>What happens</h4>
+      <p>Claude follows a strict red-green-refactor cycle:</p>
+      <ol>
+        <li><strong>Red:</strong> Write a failing test that describes the desired behavior</li>
+        <li><strong>Green:</strong> Write the minimum code to make the test pass</li>
+        <li><strong>Refactor:</strong> Clean up while keeping tests green</li>
+      </ol>
+      <h4>Key behaviors</h4>
+      <ul>
+        <li>Emphasizes integration tests over unit tests with mocks</li>
+        <li>Uses real-world fixtures and factory patterns</li>
+        <li>Ensures regression coverage for bug fixes</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<div class="section" id="w-debug" data-searchable>
+  <div class="scenario">
+    <div class="scenario-header" onclick="toggleScenario(this)">
+      <h3><span class="scenario-number">8</span> Debugging an Issue</h3>
+      <span class="scenario-chevron">&#9656;</span>
+    </div>
+    <div class="scenario-body">
+      <div class="scenario-meta">
+        <span class="tag skill">systematic-debugging</span>
+        <span class="tag skill">grafana-logs</span>
+      </div>
+      <h4>When to use</h4>
+      <p>Any bug, test failure, or unexpected behavior &mdash; before proposing fixes.</p>
+      <h4>What happens</h4>
+      <p>The systematic-debugging skill forces a disciplined approach:</p>
+      <ol>
+        <li><strong>Observe:</strong> Reproduce the issue, gather logs, read error messages carefully</li>
+        <li><strong>Hypothesize:</strong> Form specific, testable theories about the root cause</li>
+        <li><strong>Test:</strong> Validate each hypothesis with evidence</li>
+        <li><strong>Fix:</strong> Address the root cause, not symptoms</li>
+        <li><strong>Verify:</strong> Confirm the fix resolves the original issue</li>
+      </ol>
+      <h4>For production issues</h4>
+      <p>The <code>grafana-logs</code> skill connects to your Grafana/Loki instance to query production logs directly from Claude Code.</p>
+      <pre><code><span class="tok-comment"># Auto-triggers on bugs</span>
+> The payment webhook is returning 500 errors intermittently
+
+<span class="tok-comment"># For production log investigation</span>
+> /grafana-logs check for payment webhook errors in the last hour</code></pre>
+    </div>
+  </div>
+</div>
+
+<!-- Code Quality & Review -->
+<div class="section" id="w-pre-push" data-searchable>
+  <h3 class="section-subtitle">Code Quality &amp; Review</h3>
+  <div class="scenario">
+    <div class="scenario-header" onclick="toggleScenario(this)">
+      <h3><span class="scenario-number">9</span> Before Pushing Code</h3>
+      <span class="scenario-chevron">&#9656;</span>
+    </div>
+    <div class="scenario-body">
+      <div class="scenario-meta">
+        <span class="tag skill">verification-before-completion</span>
+        <span class="tag skill">requesting-code-review</span>
+        <span class="tag skill">review</span>
+      </div>
+      <h4>When to use</h4>
+      <p>You've finished implementing something and want to verify it before committing or pushing.</p>
+      <h4>What happens</h4>
+      <div class="flow-diagram">
+        <span class="flow-step">Verify (run tests, check types)</span>
+        <span class="flow-arrow">&rarr;</span>
+        <span class="flow-step">Self-review (diff analysis)</span>
+        <span class="flow-arrow">&rarr;</span>
+        <span class="flow-step">Code review agent</span>
+      </div>
+      <ol>
+        <li><strong>verification-before-completion:</strong> Runs actual commands (tests, type checks, linting) and confirms output before claiming success.</li>
+        <li><strong>requesting-code-review:</strong> Dispatches a code-reviewer agent to examine the implementation against the plan.</li>
+        <li><strong>review:</strong> Pre-landing analysis for SQL safety, trust boundary violations, conditional side effects.</li>
+      </ol>
+      <h4>How to invoke</h4>
+      <pre><code><span class="tok-comment"># Auto-triggers when you say you're done</span>
+> I've finished the notification system, ready to commit
+
+<span class="tok-comment"># Or explicitly</span>
+> /review</code></pre>
+    </div>
+  </div>
+</div>
+
+<div class="section" id="w-pr-review" data-searchable>
+  <div class="scenario">
+    <div class="scenario-header" onclick="toggleScenario(this)">
+      <h3><span class="scenario-number">10</span> Reviewing a PR</h3>
+      <span class="scenario-chevron">&#9656;</span>
+    </div>
+    <div class="scenario-body">
+      <div class="scenario-meta">
+        <span class="tag skill">pr-review</span>
+        <span class="tag skill">gh-review</span>
+      </div>
+      <h4>When to use</h4>
+      <p>You need to review a pull request.</p>
+      <h4>What happens</h4>
+      <p>The pr-review skill runs a 25-point checklist covering correctness, security, code quality, architecture, performance, testing, and observability. The gh-review skill submits the review via the GitHub CLI.</p>
+      <h4>How to invoke</h4>
+      <pre><code>> /pr-review #123
+> /gh-review</code></pre>
+    </div>
+  </div>
+</div>
+
+<div class="section" id="w-dependabot" data-searchable>
+  <div class="scenario">
+    <div class="scenario-header" onclick="toggleScenario(this)">
+      <h3><span class="scenario-number">11</span> Dependabot Alerts</h3>
+      <span class="scenario-chevron">&#9656;</span>
+    </div>
+    <div class="scenario-body">
+      <div class="scenario-meta"><span class="tag skill">dependabot-review</span></div>
+      <h4>When to use</h4>
+      <p>Dependabot has flagged vulnerabilities and you need to assess actual impact.</p>
+      <h4>What happens</h4>
+      <p>Claude analyzes the alerts, traces affected code paths, and assesses whether each vulnerability actually impacts your usage of the package.</p>
+      <h4>How to invoke</h4>
+      <pre><code>> /dependabot-review</code></pre>
+    </div>
+  </div>
+</div>
+
+<div class="section" id="w-conflicts" data-searchable>
+  <div class="scenario">
+    <div class="scenario-header" onclick="toggleScenario(this)">
+      <h3><span class="scenario-number">12</span> Merge Conflicts</h3>
+      <span class="scenario-chevron">&#9656;</span>
+    </div>
+    <div class="scenario-body">
+      <div class="scenario-meta"><span class="tag skill">conflicts</span></div>
+      <h4>When to use</h4>
+      <p>You have merge conflicts that need resolving.</p>
+      <h4>What happens</h4>
+      <p>The conflicts skill understands both sides of a conflict, the intent behind each change, and resolves them intelligently.</p>
+      <h4>How to invoke</h4>
+      <pre><code>> /conflicts</code></pre>
+    </div>
+  </div>
+</div>
+
+<!-- Shipping & Operations -->
+<div class="section" id="w-ship" data-searchable>
+  <h3 class="section-subtitle">Shipping &amp; Operations</h3>
+  <div class="scenario">
+    <div class="scenario-header" onclick="toggleScenario(this)">
+      <h3><span class="scenario-number">13</span> Shipping a Branch</h3>
+      <span class="scenario-chevron">&#9656;</span>
+    </div>
+    <div class="scenario-body">
+      <div class="scenario-meta"><span class="tag skill">ship</span></div>
+      <h4>When to use</h4>
+      <p>Your feature is complete and you want to ship it.</p>
+      <h4>What happens</h4>
+      <ol>
+        <li>Merge latest main into your branch</li>
+        <li>Run the test suite</li>
+        <li>Review the diff</li>
+        <li>Bump VERSION file</li>
+        <li>Update CHANGELOG</li>
+        <li>Commit, push, create PR</li>
+      </ol>
+      <h4>How to invoke</h4>
+      <pre><code>> /ship</code></pre>
+    </div>
+  </div>
+</div>
+
+<div class="section" id="w-publish" data-searchable>
+  <div class="scenario">
+    <div class="scenario-header" onclick="toggleScenario(this)">
+      <h3><span class="scenario-number">14</span> Publishing a Branch</h3>
+      <span class="scenario-chevron">&#9656;</span>
+    </div>
+    <div class="scenario-body">
+      <div class="scenario-meta"><span class="tag skill">publish</span></div>
+      <h4>When to use</h4>
+      <p>Push your branch to remote for review or CI.</p>
+      <h4>How to invoke</h4>
+      <pre><code>> /publish</code></pre>
+    </div>
+  </div>
+</div>
+
+<div class="section" id="w-qa" data-searchable>
+  <div class="scenario">
+    <div class="scenario-header" onclick="toggleScenario(this)">
+      <h3><span class="scenario-number">15</span> QA Testing</h3>
+      <span class="scenario-chevron">&#9656;</span>
+    </div>
+    <div class="scenario-body">
+      <div class="scenario-meta">
+        <span class="tag skill">qa</span>
+        <span class="tag skill">browse</span>
+        <span class="tag skill">setup-browser-cookies</span>
+        <span class="tag mcp">Chrome MCP</span>
+      </div>
+      <h4>When to use</h4>
+      <p>Systematically test a web application &mdash; find bugs, verify deployments, dogfood user flows.</p>
+      <h4>What happens</h4>
+      <ul>
+        <li><strong>Full:</strong> Systematic exploration of the application</li>
+        <li><strong>Quick:</strong> 30-second smoke test</li>
+        <li><strong>Regression:</strong> Compare against a baseline</li>
+      </ul>
+      <p>Uses a headless browser (~100ms per command). Produces structured reports with health scores and repro steps.</p>
+      <h4>How to invoke</h4>
+      <pre><code><span class="tok-comment"># Full QA</span>
+> /qa https://your-app.com
+
+<span class="tok-comment"># Quick smoke test</span>
+> /qa quick https://staging.your-app.com
+
+<span class="tok-comment"># If you need authenticated sessions</span>
+> /setup-browser-cookies</code></pre>
+    </div>
+  </div>
+</div>
+
+<div class="section" id="w-linear" data-searchable>
+  <div class="scenario">
+    <div class="scenario-header" onclick="toggleScenario(this)">
+      <h3><span class="scenario-number">16</span> Working with Linear</h3>
+      <span class="scenario-chevron">&#9656;</span>
+    </div>
+    <div class="scenario-body">
+      <div class="scenario-meta">
+        <span class="tag skill">linear-create</span>
+        <span class="tag mcp">Linear MCP</span>
+        <span class="tag agent">linear_pm</span>
+      </div>
+      <h4>When to use</h4>
+      <p>Creating tickets, checking project status, planning sprints, or managing issues.</p>
+      <h4>What happens</h4>
+      <ul>
+        <li><strong>linear-create skill:</strong> Creates tickets with auto-detected team/project from branch names</li>
+        <li><strong>Linear MCP server:</strong> Full read/write access to issues, projects, documents, milestones, cycles</li>
+        <li><strong>linear_pm agent:</strong> Specialized agent for sprint planning, executive summaries, status reports</li>
+      </ul>
+      <h4>How to invoke</h4>
+      <pre><code><span class="tok-comment"># Create a ticket</span>
+> /linear-create Bug: payment webhook returns 500 on retry
+
+<span class="tok-comment"># Project management queries</span>
+> What's the current status of the project?
+> Plan the next sprint</code></pre>
+    </div>
+  </div>
+</div>
+
+<!-- Advanced -->
+<div class="section" id="w-parallel" data-searchable>
+  <h3 class="section-subtitle">Advanced</h3>
+  <div class="scenario">
+    <div class="scenario-header" onclick="toggleScenario(this)">
+      <h3><span class="scenario-number">17</span> Parallel Agents</h3>
+      <span class="scenario-chevron">&#9656;</span>
+    </div>
+    <div class="scenario-body">
+      <div class="scenario-meta">
+        <span class="tag skill">dispatching-parallel-agents</span>
+        <span class="tag skill">subagent-driven-development</span>
+        <span class="tag agent">agents</span>
+      </div>
+      <h4>When to use</h4>
+      <p>You have 2+ independent tasks that can be worked on without shared state or sequential dependencies.</p>
+      <h4>What happens</h4>
+      <p>Claude launches multiple agents simultaneously, each working on an isolated task. Agents can run in git worktrees for full code isolation.</p>
+      <h4>Examples</h4>
+      <ul>
+        <li>Research 3 different API approaches in parallel</li>
+        <li>Implement independent components simultaneously</li>
+        <li>Run tests and lint in parallel while reviewing code</li>
+        <li>Explore multiple parts of a codebase at once</li>
+      </ul>
+      <h4>How it works</h4>
+      <pre><code><span class="tok-comment"># Claude decides to parallelize automatically</span>
+<span class="tok-comment"># Or you can hint at it:</span>
+> Implement the notification service and the email template
+> system in parallel &mdash; they're independent</code></pre>
+      <div class="callout tip">
+        <strong>Tip:</strong> Parallel agents work best when tasks are truly independent. If task B depends on task A's output, they must run sequentially.
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section" id="w-browser" data-searchable>
+  <div class="scenario">
+    <div class="scenario-header" onclick="toggleScenario(this)">
+      <h3><span class="scenario-number">18</span> Browser Automation</h3>
+      <span class="scenario-chevron">&#9656;</span>
+    </div>
+    <div class="scenario-body">
+      <div class="scenario-meta">
+        <span class="tag mcp">Chrome MCP</span>
+        <span class="tag skill">setup-browser-cookies</span>
+        <span class="tag skill">browse</span>
+      </div>
+      <h4>When to use</h4>
+      <p>Interact with web pages &mdash; test features, verify deployments, fill forms, take screenshots.</p>
+      <h4>Available actions</h4>
+      <ul>
+        <li><code>navigate</code> &mdash; Go to a URL</li>
+        <li><code>computer</code> &mdash; Click, type, scroll</li>
+        <li><code>form_input</code> &mdash; Fill form fields</li>
+        <li><code>find</code> &mdash; Search for elements</li>
+        <li><code>get_page_text</code> / <code>read_page</code> &mdash; Extract content</li>
+        <li><code>javascript_tool</code> &mdash; Execute arbitrary JS</li>
+        <li><code>gif_creator</code> &mdash; Record multi-step interactions as GIFs</li>
+        <li><code>read_console_messages</code> / <code>read_network_requests</code> &mdash; Debug</li>
+      </ul>
+      <h4>How to invoke</h4>
+      <pre><code>> Go to staging and verify the new dashboard loads correctly
+> Fill out the signup form and check for validation errors
+> Take a screenshot of the payment page on mobile viewport</code></pre>
+    </div>
+  </div>
+</div>
+
+<div class="section" id="w-arch" data-searchable>
+  <div class="scenario">
+    <div class="scenario-header" onclick="toggleScenario(this)">
+      <h3><span class="scenario-number">19</span> Architecture Reviews</h3>
+      <span class="scenario-chevron">&#9656;</span>
+    </div>
+    <div class="scenario-body">
+      <div class="scenario-meta">
+        <span class="tag skill">architecture-review</span>
+        <span class="tag skill">plan-ceo-review</span>
+        <span class="tag skill">plan-eng-review</span>
+      </div>
+      <h4>When to use</h4>
+      <p>Reviewing codebase health, challenging plans, or ensuring architectural soundness.</p>
+      <h4>Three review modes</h4>
+      <ul>
+        <li><strong>architecture-review:</strong> Staff-level codebase health check. Monolithic modules, silent failures, type safety gaps, test coverage holes.</li>
+        <li><strong>plan-ceo-review:</strong> Founder mode. Rethinks the problem, challenges premises. Three sub-modes: scope expansion, hold scope, scope reduction.</li>
+        <li><strong>plan-eng-review:</strong> EM mode. Locks in execution &mdash; architecture, data flow, edge cases, test coverage, performance.</li>
+      </ul>
+      <h4>How to invoke</h4>
+      <pre><code>> /architecture-review
+> /plan-ceo-review
+> /plan-eng-review</code></pre>
+    </div>
+  </div>
+</div>
+
+<div class="section" id="w-retro" data-searchable>
+  <div class="scenario">
+    <div class="scenario-header" onclick="toggleScenario(this)">
+      <h3><span class="scenario-number">20</span> Retrospectives</h3>
+      <span class="scenario-chevron">&#9656;</span>
+    </div>
+    <div class="scenario-body">
+      <div class="scenario-meta"><span class="tag skill">retro</span></div>
+      <h4>When to use</h4>
+      <p>Weekly engineering retrospective.</p>
+      <h4>What happens</h4>
+      <p>Analyzes git history, tracks metrics with persistent history and trends. Team-aware: breaks down per-person contributions with praise and growth areas.</p>
+      <h4>How to invoke</h4>
+      <pre><code>> /retro</code></pre>
+    </div>
+  </div>
+</div>
+
+<div class="section" id="w-custom-skills" data-searchable>
+  <div class="scenario">
+    <div class="scenario-header" onclick="toggleScenario(this)">
+      <h3><span class="scenario-number">21</span> Writing Custom Skills</h3>
+      <span class="scenario-chevron">&#9656;</span>
+    </div>
+    <div class="scenario-body">
+      <div class="scenario-meta">
+        <span class="tag skill">writing-skills</span>
+        <span class="tag skill">agent-prompt</span>
+      </div>
+      <h4>When to use</h4>
+      <p>Create a new reusable skill or edit an existing one.</p>
+      <h4>Skill structure</h4>
+      <pre><code><span class="tok-path">~/.claude/skills/your-skill/</span>
+  <span class="tok-path">skill.md</span>        <span class="tok-comment"># Skill definition with frontmatter</span>
+  <span class="tok-path">README.md</span>       <span class="tok-comment"># Optional documentation</span>
+  <span class="tok-path">templates/</span>      <span class="tok-comment"># Optional templates or helpers</span></code></pre>
+      <h4>How to invoke</h4>
+      <pre><code>> /writing-skills create a skill for database backup verification</code></pre>
+    </div>
+  </div>
+</div>
+
+<div class="section" id="w-memory" data-searchable>
+  <div class="scenario">
+    <div class="scenario-header" onclick="toggleScenario(this)">
+      <h3><span class="scenario-number">22</span> Managing Memory</h3>
+      <span class="scenario-chevron">&#9656;</span>
+    </div>
+    <div class="scenario-body">
+      <div class="scenario-meta"><span class="tag">core system</span></div>
+      <h4>When to use</h4>
+      <p>You want Claude to remember something for future conversations, or you want to review/prune what it knows.</p>
+      <h4>How memory works</h4>
+      <ul>
+        <li>Memory files live at <code>~/.claude/projects/{project}/memory/</code></li>
+        <li>An index file (<code>MEMORY.md</code>) tracks all memories</li>
+        <li>Four types: <strong>user</strong> (role/preferences), <strong>feedback</strong> (corrections), <strong>project</strong> (work context), <strong>reference</strong> (external pointers)</li>
+        <li>Claude loads relevant memories at conversation start</li>
+      </ul>
+      <h4>How to use</h4>
+      <pre><code><span class="tok-comment"># Save something to memory</span>
+> Remember that I prefer integration tests over unit tests with mocks
+
+<span class="tok-comment"># Claude saves feedback from corrections automatically</span>
+> No, don't use styled-components &mdash; we've migrated to Tailwind
+<span class="tok-comment"># (Claude remembers this for next time)</span>
+
+<span class="tok-comment"># Ask Claude to recall</span>
+> What do you remember about my testing preferences?
+
+<span class="tok-comment"># Ask Claude to forget</span>
+> Forget the memory about the deadline &mdash; it's been extended</code></pre>
+      <div class="callout tip">
+        <strong>Tip:</strong> Memory is most powerful for feedback. When you correct Claude, it saves that correction and avoids the same mistake in future conversations.
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section" id="w-troubleshoot" data-searchable>
+  <div class="scenario">
+    <div class="scenario-header" onclick="toggleScenario(this)">
+      <h3><span class="scenario-number">23</span> Troubleshooting</h3>
+      <span class="scenario-chevron">&#9656;</span>
+    </div>
+    <div class="scenario-body">
+      <div class="scenario-meta"><span class="tag">essentials</span></div>
+      <h4>When to use</h4>
+      <p>Claude is stuck, using the wrong skill, giving bad answers, or not behaving as expected.</p>
+      <h4>Common issues &amp; fixes</h4>
+      <ul>
+        <li><strong>Wrong skill:</strong> Be more specific. Say "don't use brainstorming, just write the code" or "skip the planning phase."</li>
+        <li><strong>Stuck in a loop:</strong> Say "stop" or "try a different approach."</li>
+        <li><strong>Forgot context:</strong> Long conversations get compressed. Re-state important context, or use memory: "Remember that we're using the v2 API."</li>
+        <li><strong>Skills not loading:</strong> Check <code>~/.claude/settings.json</code> for plugin configuration.</li>
+        <li><strong>MCP server not responding:</strong> Check that the extension/server is running.</li>
+        <li><strong>Permission denied:</strong> Add the command to <code>settings.json</code> permissions, or approve when prompted.</li>
+      </ul>
+      <h4>Power user tips</h4>
+      <ul>
+        <li>Use <code>/help</code> to see available commands</li>
+        <li>Give feedback to correct behavior: "Don't do X, instead do Y." Claude saves this to memory.</li>
+        <li>For complex tasks, let the brainstorming skill run &mdash; it prevents wasted implementation work</li>
+        <li>If Claude's response is too verbose, say "be more concise" &mdash; it'll remember</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- ===== REFERENCE CATALOG ===== -->
+<div class="section" id="ref-plugins" data-searchable>
+  <h2 class="section-title">Reference Catalog</h2>
+  <p class="section-intro">Complete catalog of every plugin, skill, agent type, and MCP server.</p>
+  <h3 class="section-subtitle">Plugins</h3>
+  <div class="ref-grid">
+    <div class="ref-card">
+      <div class="ref-card-header"><span class="tag plugin">plugin</span><h4>Superpowers</h4></div>
+      <p>The core development workflow plugin. 14 skills that enforce disciplined planning, execution, review, and shipping workflows. Auto-triggers based on context.</p>
+      <p class="trigger">Version: <code>v5.0.4</code> &middot; Source: <code>claude-plugins-official</code></p>
+      <p class="trigger">Skills: brainstorming, writing-plans, executing-plans, dispatching-parallel-agents, subagent-driven-development, test-driven-development, systematic-debugging, using-git-worktrees, requesting-code-review, receiving-code-review, verification-before-completion, finishing-a-development-branch, writing-skills, using-superpowers</p>
+    </div>
+    <div class="ref-card">
+      <div class="ref-card-header"><span class="tag plugin">plugin</span><h4>Frontend Design</h4></div>
+      <p>Production-grade UI generation with distinctive aesthetics. Avoids generic AI look. Respects existing design systems.</p>
+      <p class="trigger">Source: <code>claude-plugins-official</code></p>
+    </div>
+  </div>
+</div>
+
+<div class="section" id="ref-planning" data-searchable>
+  <h3 class="section-subtitle">Planning &amp; Design</h3>
+  <div class="ref-grid">
+    <div class="ref-card">
+      <div class="ref-card-header"><span class="tag skill">skill</span><h4>brainstorming</h4></div>
+      <p>Collaborative design exploration. Asks clarifying questions one at a time, proposes 2-3 approaches with trade-offs, presents design for approval.</p>
+      <p class="trigger">Trigger: <code>auto</code> &mdash; activates on new features or creative tasks</p>
+    </div>
+    <div class="ref-card">
+      <div class="ref-card-header"><span class="tag skill">skill</span><h4>writing-plans</h4></div>
+      <p>Converts approved designs into detailed, ordered implementation plans with file paths, steps, and test coverage.</p>
+      <p class="trigger">Trigger: <code>auto</code> &mdash; follows brainstorming</p>
+    </div>
+    <div class="ref-card">
+      <div class="ref-card-header"><span class="tag skill">skill</span><h4>executing-plans</h4></div>
+      <p>Executes plans step by step with review checkpoints. Can dispatch parallel agents for independent tasks.</p>
+      <p class="trigger">Trigger: <code>auto</code> &mdash; follows writing-plans</p>
+    </div>
+  </div>
+</div>
+
+<div class="section" id="ref-quality" data-searchable>
+  <h3 class="section-subtitle">Code Quality</h3>
+  <div class="ref-grid">
+    <div class="ref-card">
+      <div class="ref-card-header"><span class="tag skill">skill</span><h4>pr-review</h4></div>
+      <p>25-point checklist: correctness, security, code quality, architecture, performance, testing, observability.</p>
+      <p class="trigger">Trigger: <code>/pr-review</code> or <code>/pr-review #123</code></p>
+    </div>
+    <div class="ref-card">
+      <div class="ref-card-header"><span class="tag skill">skill</span><h4>gh-review</h4></div>
+      <p>Submits a GitHub PR review using the <code>gh</code> CLI.</p>
+      <p class="trigger">Trigger: <code>/gh-review</code></p>
+    </div>
+    <div class="ref-card">
+      <div class="ref-card-header"><span class="tag skill">skill</span><h4>review</h4></div>
+      <p>Pre-landing diff analysis. SQL safety, LLM trust boundaries, conditional side effects, structural issues.</p>
+      <p class="trigger">Trigger: <code>/review</code></p>
+    </div>
+    <div class="ref-card">
+      <div class="ref-card-header"><span class="tag skill">skill</span><h4>requesting-code-review</h4></div>
+      <p>Dispatches a code-reviewer agent to examine implementation against plan and standards.</p>
+      <p class="trigger">Trigger: <code>auto</code> &mdash; on task completion</p>
+    </div>
+    <div class="ref-card">
+      <div class="ref-card-header"><span class="tag skill">skill</span><h4>receiving-code-review</h4></div>
+      <p>Handles review feedback with technical rigor. Verifies suggestions before implementing.</p>
+      <p class="trigger">Trigger: <code>auto</code> &mdash; on review feedback</p>
+    </div>
+    <div class="ref-card">
+      <div class="ref-card-header"><span class="tag skill">skill</span><h4>verification-before-completion</h4></div>
+      <p>Runs verification commands and confirms output before claiming completion. Evidence before assertions.</p>
+      <p class="trigger">Trigger: <code>auto</code> &mdash; before committing or claiming done</p>
+    </div>
+    <div class="ref-card">
+      <div class="ref-card-header"><span class="tag skill">skill</span><h4>architecture-review</h4></div>
+      <p>Staff-level codebase health review. Monolithic modules, silent failures, type safety gaps, test coverage holes.</p>
+      <p class="trigger">Trigger: <code>/architecture-review</code></p>
+    </div>
+    <div class="ref-card">
+      <div class="ref-card-header"><span class="tag skill">skill</span><h4>warden</h4></div>
+      <p>Code quality analyzer. Checks changes before committing. Configurable via <code>warden.toml</code>.</p>
+      <p class="trigger">Trigger: <code>/warden</code></p>
+    </div>
+    <div class="ref-card">
+      <div class="ref-card-header"><span class="tag skill">skill</span><h4>find-warden-bugs</h4></div>
+      <p>Bug detection from historical patterns. Targets architectural seams where bugs recur.</p>
+      <p class="trigger">Trigger: <code>/find-warden-bugs</code></p>
+    </div>
+    <div class="ref-card">
+      <div class="ref-card-header"><span class="tag skill">skill</span><h4>testing-guidelines</h4></div>
+      <p>Guide for writing tests. Integration tests, real-world fixtures, regression coverage.</p>
+      <p class="trigger">Trigger: <code>auto</code> &mdash; when adding functionality or fixing bugs</p>
+    </div>
+  </div>
+</div>
+
+<div class="section" id="ref-dev" data-searchable>
+  <h3 class="section-subtitle">Development</h3>
+  <div class="ref-grid">
+    <div class="ref-card">
+      <div class="ref-card-header"><span class="tag skill">skill</span><h4>test-driven-development</h4></div>
+      <p>Red-green-refactor TDD cycle. Write failing test first, then minimum code to pass, then refactor.</p>
+      <p class="trigger">Trigger: <code>auto</code> &mdash; on feature implementation or bugfix</p>
+    </div>
+    <div class="ref-card">
+      <div class="ref-card-header"><span class="tag skill">skill</span><h4>systematic-debugging</h4></div>
+      <p>Disciplined debugging: observe, hypothesize, test, fix, verify.</p>
+      <p class="trigger">Trigger: <code>auto</code> &mdash; on bugs, test failures, unexpected behavior</p>
+    </div>
+    <div class="ref-card">
+      <div class="ref-card-header"><span class="tag skill">skill</span><h4>subagent-driven-development</h4></div>
+      <p>Orchestrates multiple agents executing independent tasks in the current session.</p>
+      <p class="trigger">Trigger: <code>auto</code> &mdash; during plan execution with independent tasks</p>
+    </div>
+    <div class="ref-card">
+      <div class="ref-card-header"><span class="tag skill">skill</span><h4>dispatching-parallel-agents</h4></div>
+      <p>Launches 2+ independent agents simultaneously without shared state.</p>
+      <p class="trigger">Trigger: <code>auto</code> &mdash; on independent parallelizable tasks</p>
+    </div>
+    <div class="ref-card">
+      <div class="ref-card-header"><span class="tag skill">skill</span><h4>using-git-worktrees</h4></div>
+      <p>Creates isolated git worktrees for feature work with smart directory selection.</p>
+      <p class="trigger">Trigger: <code>/using-git-worktrees</code></p>
+    </div>
+    <div class="ref-card">
+      <div class="ref-card-header"><span class="tag skill">skill</span><h4>finishing-a-development-branch</h4></div>
+      <p>Guides completion of dev work. Structured options for merge, PR, or cleanup.</p>
+      <p class="trigger">Trigger: <code>auto</code> &mdash; when implementation is complete and tests pass</p>
+    </div>
+  </div>
+</div>
+
+<div class="section" id="ref-frontend" data-searchable>
+  <h3 class="section-subtitle">Frontend</h3>
+  <div class="ref-grid">
+    <div class="ref-card">
+      <div class="ref-card-header"><span class="tag skill">skill</span><h4>frontend-design</h4></div>
+      <p>Distinctive, production-grade frontend interfaces. Uses your project's design system.</p>
+      <p class="trigger">Trigger: <code>auto</code> &mdash; on web component/page/app creation</p>
+    </div>
+  </div>
+</div>
+
+<div class="section" id="ref-database" data-searchable>
+  <h3 class="section-subtitle">Database</h3>
+  <div class="ref-grid">
+    <div class="ref-card">
+      <div class="ref-card-header"><span class="tag skill">skill</span><h4>prisma-migration</h4></div>
+      <p>Guides Prisma schema changes and migrations. Safety checks, naming, index coverage.</p>
+      <p class="trigger">Trigger: <code>auto</code> &mdash; on schema.prisma edits</p>
+    </div>
+    <div class="ref-card">
+      <div class="ref-card-header"><span class="tag skill">skill</span><h4>prisma-v7-migration</h4></div>
+      <p>Prisma v7 upgrade guide. Breaking changes, new APIs, migration steps.</p>
+      <p class="trigger">Trigger: <code>auto</code> &mdash; on Prisma v7 upgrade tasks</p>
+    </div>
+  </div>
+</div>
+
+<div class="section" id="ref-shipping" data-searchable>
+  <h3 class="section-subtitle">Shipping</h3>
+  <div class="ref-grid">
+    <div class="ref-card">
+      <div class="ref-card-header"><span class="tag skill">skill</span><h4>ship</h4></div>
+      <p>Full shipping workflow: merge main, tests, review diff, version bump, CHANGELOG, commit, push, create PR.</p>
+      <p class="trigger">Trigger: <code>/ship</code></p>
+    </div>
+    <div class="ref-card">
+      <div class="ref-card-header"><span class="tag skill">skill</span><h4>publish</h4></div>
+      <p>Push branch to remote for review or CI.</p>
+      <p class="trigger">Trigger: <code>/publish</code></p>
+    </div>
+    <div class="ref-card">
+      <div class="ref-card-header"><span class="tag skill">skill</span><h4>conflicts</h4></div>
+      <p>Intelligent merge conflict resolution. Understands intent behind both sides.</p>
+      <p class="trigger">Trigger: <code>/conflicts</code></p>
+    </div>
+    <div class="ref-card">
+      <div class="ref-card-header"><span class="tag skill">skill</span><h4>dependabot-review</h4></div>
+      <p>Analyzes Dependabot alerts, traces code paths, assesses actual vulnerability impact.</p>
+      <p class="trigger">Trigger: <code>/dependabot-review</code></p>
+    </div>
+  </div>
+</div>
+
+<div class="section" id="ref-qa" data-searchable>
+  <h3 class="section-subtitle">QA &amp; Testing</h3>
+  <div class="ref-grid">
+    <div class="ref-card">
+      <div class="ref-card-header"><span class="tag skill">skill</span><h4>qa</h4></div>
+      <p>Systematic QA testing. Full, quick (30s), or regression modes. Structured reports with health scores.</p>
+      <p class="trigger">Trigger: <code>/qa</code> or <code>/qa quick</code></p>
+    </div>
+    <div class="ref-card">
+      <div class="ref-card-header"><span class="tag skill">skill</span><h4>browse</h4></div>
+      <p>Fast headless browser (~100ms/command). Navigate, interact, verify, screenshot, test forms.</p>
+      <p class="trigger">Trigger: <code>/browse</code> &middot; Source: <code>gstack</code></p>
+    </div>
+    <div class="ref-card">
+      <div class="ref-card-header"><span class="tag skill">skill</span><h4>setup-browser-cookies</h4></div>
+      <p>Import cookies from real browsers into headless sessions. Interactive picker UI.</p>
+      <p class="trigger">Trigger: <code>/setup-browser-cookies</code></p>
+    </div>
+    <div class="ref-card">
+      <div class="ref-card-header"><span class="tag skill">skill</span><h4>grafana-logs</h4></div>
+      <p>Query Grafana/Loki logs for production services. Errors, error rates, app logs.</p>
+      <p class="trigger">Trigger: <code>/grafana-logs</code> &middot; Requires Chrome MCP</p>
+    </div>
+  </div>
+</div>
+
+<div class="section" id="ref-integration" data-searchable>
+  <h3 class="section-subtitle">Integration</h3>
+  <div class="ref-grid">
+    <div class="ref-card">
+      <div class="ref-card-header"><span class="tag skill">skill</span><h4>linear-create</h4></div>
+      <p>Creates Linear tickets. Auto-detects team/project from branch names.</p>
+      <p class="trigger">Trigger: <code>/linear-create</code></p>
+    </div>
+    <div class="ref-card">
+      <div class="ref-card-header"><span class="tag skill">skill</span><h4>plan-ceo-review</h4></div>
+      <p>CEO/founder-mode plan review. Rethinks problems, challenges premises. Scope expansion/hold/reduction modes.</p>
+      <p class="trigger">Trigger: <code>/plan-ceo-review</code></p>
+    </div>
+    <div class="ref-card">
+      <div class="ref-card-header"><span class="tag skill">skill</span><h4>plan-eng-review</h4></div>
+      <p>EM-mode plan review. Architecture, data flow, edge cases, test coverage, performance.</p>
+      <p class="trigger">Trigger: <code>/plan-eng-review</code></p>
+    </div>
+    <div class="ref-card">
+      <div class="ref-card-header"><span class="tag skill">skill</span><h4>retro</h4></div>
+      <p>Weekly retrospective. Git history analysis, work patterns, code quality. Team-aware breakdowns.</p>
+      <p class="trigger">Trigger: <code>/retro</code></p>
+    </div>
+  </div>
+</div>
+
+<div class="section" id="ref-agents" data-searchable>
+  <h3 class="section-subtitle">Agent Types</h3>
+  <div class="ref-grid">
+    <div class="ref-card">
+      <div class="ref-card-header"><span class="tag agent">agent</span><h4>general-purpose</h4></div>
+      <p>Default agent for complex, multi-step tasks. Has access to all tools.</p>
+      <p class="trigger">Tools: <code>all</code></p>
+    </div>
+    <div class="ref-card">
+      <div class="ref-card-header"><span class="tag agent">agent</span><h4>Explore</h4></div>
+      <p>Fast codebase exploration. File patterns, keyword search, codebase Q&amp;A. Three levels: quick, medium, very thorough.</p>
+      <p class="trigger">Tools: <code>all except Agent, Edit, Write, NotebookEdit</code></p>
+    </div>
+    <div class="ref-card">
+      <div class="ref-card-header"><span class="tag agent">agent</span><h4>Plan</h4></div>
+      <p>Software architect. Implementation plans, critical files, architectural trade-offs. Read-only.</p>
+      <p class="trigger">Tools: <code>all except Agent, Edit, Write, NotebookEdit</code></p>
+    </div>
+    <div class="ref-card">
+      <div class="ref-card-header"><span class="tag agent">agent</span><h4>code-reviewer</h4></div>
+      <p>Reviews completed work against plans and coding standards. Dispatched after major project steps.</p>
+      <p class="trigger">Tools: <code>all</code></p>
+    </div>
+    <div class="ref-card">
+      <div class="ref-card-header"><span class="tag agent">agent</span><h4>vercel_ai_sdk</h4></div>
+      <p>Vercel AI SDK expert. AI Elements, React SDK, TypeScript patterns. AI-powered components.</p>
+      <p class="trigger">Tools: <code>all</code></p>
+    </div>
+    <div class="ref-card">
+      <div class="ref-card-header"><span class="tag agent">agent</span><h4>prompter</h4></div>
+      <p>Two modes: <strong>system</strong> crafts production-grade system prompts; <strong>view</strong> generates HTML for comparing variations.</p>
+      <p class="trigger">Tools: <code>all</code></p>
+    </div>
+    <div class="ref-card">
+      <div class="ref-card-header"><span class="tag agent">agent</span><h4>linear_pm</h4></div>
+      <p>Project management for Linear. Tickets, sprints, issues, executive summaries.</p>
+      <p class="trigger">Tools: <code>all</code></p>
+    </div>
+  </div>
+</div>
+
+<div class="section" id="ref-mcp" data-searchable>
+  <h3 class="section-subtitle">MCP Servers</h3>
+  <div class="ref-grid">
+    <div class="ref-card">
+      <div class="ref-card-header"><span class="tag mcp">mcp</span><h4>Pencil</h4></div>
+      <p>Design editor for <code>.pen</code> files. Batch operations, screenshots, layout inspection, variables/themes, image export.</p>
+      <p class="trigger">Tools: <code>batch_get</code>, <code>batch_design</code>, <code>get_screenshot</code>, <code>snapshot_layout</code>, <code>get_variables</code>, <code>set_variables</code>, <code>export_nodes</code></p>
+    </div>
+    <div class="ref-card">
+      <div class="ref-card-header"><span class="tag mcp">mcp</span><h4>Chrome (claude-in-chrome)</h4></div>
+      <p>Full browser automation. Navigate, click/type/scroll, forms, page content, JS execution, screenshots, GIF recording, console/network logs.</p>
+      <p class="trigger">Tools: <code>navigate</code>, <code>computer</code>, <code>form_input</code>, <code>find</code>, <code>get_page_text</code>, <code>read_page</code>, <code>javascript_tool</code>, <code>gif_creator</code></p>
+    </div>
+    <div class="ref-card">
+      <div class="ref-card-header"><span class="tag mcp">mcp</span><h4>Linear</h4></div>
+      <p>Full Linear API. Issues, projects, documents, milestones, cycles, labels, comments, customers. 30+ tools.</p>
+      <p class="trigger">Tools: <code>save_issue</code>, <code>get_issue</code>, <code>list_issues</code>, <code>save_project</code>, <code>create_document</code>, <code>search_documentation</code></p>
+    </div>
+    <div class="ref-card">
+      <div class="ref-card-header"><span class="tag mcp">mcp</span><h4>Excalidraw</h4></div>
+      <p>Diagrams and visual collaboration. Create views, export, save/read checkpoints.</p>
+      <p class="trigger">Tools: <code>create_view</code>, <code>export_to_excalidraw</code>, <code>save_checkpoint</code>, <code>read_checkpoint</code></p>
+    </div>
+  </div>
+</div>
+
+<div class="section" id="ref-core" data-searchable>
+  <h3 class="section-subtitle">Core Systems</h3>
+  <div class="ref-grid">
+    <div class="ref-card">
+      <div class="ref-card-header"><span class="tag">system</span><h4>Memory</h4></div>
+      <p>Persistent file-based knowledge. User preferences, feedback/corrections, project context, external references.</p>
+      <p class="trigger">Location: <code>~/.claude/projects/{project}/memory/</code> &middot; Index: <code>MEMORY.md</code></p>
+      <p>Four types: <strong>user</strong>, <strong>feedback</strong>, <strong>project</strong>, <strong>reference</strong>. Each is a markdown file with frontmatter.</p>
+    </div>
+    <div class="ref-card">
+      <div class="ref-card-header"><span class="tag">system</span><h4>Hooks</h4></div>
+      <p>Shell commands triggered by Claude Code events. Enforce team standards, run validations, send notifications.</p>
+      <p class="trigger">Config: <code>~/.claude/settings.json</code> under <code>hooks</code></p>
+    </div>
+    <div class="ref-card">
+      <div class="ref-card-header"><span class="tag">system</span><h4>CLAUDE.md</h4></div>
+      <p>Project-scoped instruction files. Layered: global + project root + sub-directories. Teaches Claude your codebase.</p>
+      <p class="trigger">Location: any directory in your project hierarchy</p>
+    </div>
+  </div>
+</div>
+
+<div class="section" id="ref-meta" data-searchable>
+  <h3 class="section-subtitle">Meta</h3>
+  <div class="ref-grid">
+    <div class="ref-card">
+      <div class="ref-card-header"><span class="tag skill">skill</span><h4>using-superpowers</h4></div>
+      <p>Bootstrapping skill at conversation start. Ensures skills are invoked before responses.</p>
+      <p class="trigger">Trigger: <code>auto</code> &mdash; every conversation start</p>
+    </div>
+    <div class="ref-card">
+      <div class="ref-card-header"><span class="tag skill">skill</span><h4>writing-skills</h4></div>
+      <p>Create new skills, edit existing ones, verify before deployment.</p>
+      <p class="trigger">Trigger: <code>/writing-skills</code></p>
+    </div>
+    <div class="ref-card">
+      <div class="ref-card-header"><span class="tag skill">skill</span><h4>agent-prompt</h4></div>
+      <p>Reference for effective agent prompts and skill architecture.</p>
+      <p class="trigger">Trigger: <code>/agent-prompt</code></p>
+    </div>
+    <div class="ref-card">
+      <div class="ref-card-header"><span class="tag skill">skill</span><h4>update-config</h4></div>
+      <p>Configure settings: permissions, env vars, hooks, plugin settings.</p>
+      <p class="trigger">Trigger: <code>/update-config</code></p>
+    </div>
+    <div class="ref-card">
+      <div class="ref-card-header"><span class="tag skill">skill</span><h4>keybindings-help</h4></div>
+      <p>Customize keyboard shortcuts and keybindings.</p>
+      <p class="trigger">Trigger: <code>/keybindings-help</code></p>
+    </div>
+  </div>
+</div>
+
+</main>
+</div>
+
+<script>
+function toggleTheme() {
+  const html = document.documentElement;
+  const next = html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+  html.setAttribute('data-theme', next);
+  localStorage.setItem('theme', next);
+  updateThemeUI(next);
+}
+function updateThemeUI(t) {
+  document.getElementById('theme-icon').innerHTML = t === 'dark' ? '&#9790;' : '&#9728;';
+  document.getElementById('theme-label').textContent = t === 'dark' ? 'Light mode' : 'Dark mode';
+}
+const savedTheme = localStorage.getItem('theme') || 'dark';
+document.documentElement.setAttribute('data-theme', savedTheme);
+updateThemeUI(savedTheme);
+
+function toggleScenario(header) { header.closest('.scenario').classList.toggle('open'); }
+
+const searchInput = document.getElementById('search');
+const navLinks = document.querySelectorAll('.nav-link');
+const sections = document.querySelectorAll('.section[data-searchable]');
+
+searchInput.addEventListener('input', function() {
+  const q = this.value.toLowerCase().trim();
+  if (!q) {
+    navLinks.forEach(l => l.classList.remove('hidden'));
+    sections.forEach(s => s.classList.remove('search-hidden'));
+    return;
+  }
+  sections.forEach(s => {
+    const matches = s.textContent.toLowerCase().includes(q);
+    s.classList.toggle('search-hidden', !matches);
+  });
+  navLinks.forEach(l => {
+    const sid = l.getAttribute('data-section');
+    const sec = document.getElementById(sid);
+    if (sec) l.classList.toggle('hidden', sec.classList.contains('search-hidden'));
+    else l.classList.toggle('hidden', !l.textContent.toLowerCase().includes(q));
+  });
+});
+
+const observer = new IntersectionObserver((entries) => {
+  entries.forEach(e => {
+    if (e.isIntersecting) {
+      const id = e.target.id;
+      navLinks.forEach(l => l.classList.toggle('active', l.getAttribute('data-section') === id));
+    }
+  });
+}, { rootMargin: '-80px 0px -60% 0px', threshold: 0 });
+sections.forEach(s => observer.observe(s));
+
+navLinks.forEach(l => l.addEventListener('click', () => {
+  if (window.innerWidth <= 768) document.querySelector('.sidebar').classList.remove('open');
+}));
+
+document.addEventListener('keydown', (e) => {
+  if (e.key === '/' && document.activeElement !== searchInput) { e.preventDefault(); searchInput.focus(); }
+  if (e.key === 'Escape' && document.activeElement === searchInput) { searchInput.value = ''; searchInput.dispatchEvent(new Event('input')); searchInput.blur(); }
+});
+</script>
+</body>
+</html>
